@@ -80,7 +80,7 @@ func runDownload() {
 
 	addr := fmt.Sprintf("http://%v/", lr.Addr())
 	log.Printf("Listening on %s", addr)
-	qrterminal.Generate(addr, qrterminal.L, os.Stdout)
+	qrterminal.GenerateHalfBlock(addr, qrterminal.M, os.Stdout)
 	wg.Wait()
 	lr.Close()
 	time.Sleep(10 * time.Second)
@@ -98,5 +98,5 @@ func runSnippet() {
 	assert.OK(flag.NArg() > 0)
 
 	s := strings.Join(flag.Args(), " ")
-	qrterminal.Generate(s, qrterminal.L, os.Stdout)
+	qrterminal.GenerateHalfBlock(s, qrterminal.M, os.Stdout)
 }

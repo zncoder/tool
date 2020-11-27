@@ -7,10 +7,14 @@ const indexTmpl = `<html>
     <title>Download Files</title>
     <style>
       .done { text-decoration: line-through; }
+      button {
+        font-size: 1.2em;
+        cursor: pointer;
+      }
     </style> 
   </head>
   <body>
-    <div><a href="#" onclick="downloadAll()">Download all files</a></div>
+    <div><button onclick="downloadAll()">Download all files</button></div>
     <ol>
       {{range .}}<li>
 				<a class="file" href="/download?f={{.Path}}" download="{{.Name}}">{{.Name}}</a>
