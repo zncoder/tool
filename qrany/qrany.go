@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -51,6 +52,7 @@ func runDownload() {
 		assert.Nil(err)
 	})
 	http.HandleFunc("/download", func(w http.ResponseWriter, r *http.Request) {
+		log.Println("req", r)
 		filename := r.URL.Query().Get("f")
 		f, err := os.Open(filename)
 		if err != nil {
@@ -58,6 +60,11 @@ func runDownload() {
 			return
 		}
 		defer f.Close()
+
+		st, err := f.Stat()
+		assert.Nil(err)
+		log.Printf("Downloading file:%q size:%s", filename, printSize(st.Size()))
+
 		w.Header().Add("Content-Type", "application/octet-stream")
 		_, err = io.Copy(w, f)
 		if err != nil {
@@ -70,6 +77,7 @@ func runDownload() {
 	})
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		x := <-status
+		log.Println("status:", x)
 		io.WriteString(w, x)
 	})
 
@@ -80,10 +88,22 @@ func runDownload() {
 
 	addr := fmt.Sprintf("http://%v/", lr.Addr())
 	log.Printf("Listening on %s", addr)
-	qrterminal.GenerateHalfBlock(addr, qrterminal.M, os.Stdout)
+	//qrterminal.GenerateHalfBlock(addr, qrterminal.H, os.Stdout)
+	qrterminal.Generate(addr, qrterminal.M, os.Stdout)
 	wg.Wait()
 	lr.Close()
 	time.Sleep(10 * time.Second)
+}
+
+func printSize(n int64) string {
+	switch {
+	case n < 1e6:
+		return strconv.FormatInt(n, 10)
+	case n < 1e9:
+		return fmt.Sprintf("%.2fMB", float64(n)/1e6)
+	default:
+		return fmt.Sprintf("%.2fGB", float64(n)/1e9)
+	}
 }
 
 func HostIP() net.IP {

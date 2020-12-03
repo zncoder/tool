@@ -23,25 +23,28 @@ const indexTmpl = `<html>
 		</ol>
 		
     <script>
-			function downloadAll() {
+			async function downloadAll() {
         let els = document.querySelectorAll(".file")
         for (let el of els) {
-          download(el) 
-          el.classList.add("done")
+          await download(el) 
 				}
 			}
       
       async function download(el) {
+        console.log("clicked " + el.href)
 				el.click()
 				await downloadComplete(el.href)
+        el.classList.add("done")
 			}
 
 			async function downloadComplete(href) {
 				let resp = await fetch("/status")
 				if (!resp.ok) {
+          console.log("fetch status err"); console.log(resp)
 					throw href
 				}
-        console.log(await resp.text())
+        let t = await resp.text()
+        console.log("done " + t)
 			}
     </script>
   </body>
