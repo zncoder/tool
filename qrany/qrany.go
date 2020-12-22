@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
 	"log"
 	"net"
@@ -19,6 +18,8 @@ import (
 	"github.com/zncoder/assert"
 	"github.com/zncoder/easycmd"
 )
+
+//go:generate filetemplater -f indextmpl.html
 
 func main() {
 	easycmd.Handle("download", runDownload, "embed the download page in QR")
@@ -45,15 +46,16 @@ func runDownload() {
 	var wg sync.WaitGroup
 	wg.Add(len(files))
 
-	tmpl := template.Must(template.New("index").Parse(indexTmpl))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/html")
-		err := tmpl.Execute(w, files)
+		err := indextmpl.Execute(w, files)
+		log.Println("index", err)
 		assert.Nil(err)
 	})
 	http.HandleFunc("/download", func(w http.ResponseWriter, r *http.Request) {
-		log.Println("req", r)
-		filename := r.URL.Query().Get("f")
+		log.Println("download", r.URL)
+		q := r.URL.Query()
+		filename := q.Get("f")
 		f, err := os.Open(filename)
 		if err != nil {
 			http.Error(w, "open file", http.StatusNotFound)
@@ -71,9 +73,13 @@ func runDownload() {
 			log.Printf("download file:%q err:%v", filename, err)
 			return
 		}
-		status <- filename
-		wg.Done()
-		log.Println("finish", filename)
+		if q.Get("auto") == "1" {
+			log.Println("finish auto", filename)
+			status <- filename
+			wg.Done()
+		} else {
+			log.Println("finish", filename)
+		}
 	})
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		x := <-status
@@ -91,6 +97,7 @@ func runDownload() {
 	//qrterminal.GenerateHalfBlock(addr, qrterminal.H, os.Stdout)
 	qrterminal.Generate(addr, qrterminal.M, os.Stdout)
 	wg.Wait()
+	log.Println("exiting")
 	lr.Close()
 	time.Sleep(10 * time.Second)
 }
