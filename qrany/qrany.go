@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/mdp/qrterminal"
@@ -19,7 +21,9 @@ import (
 	"github.com/zncoder/easycmd"
 )
 
-//go:generate filetemplater -f indextmpl.html
+//go:embed indextmpl.html
+var indextmpl string
+var indexTmpl = template.Must(template.New("index").Parse(indextmpl))
 
 func main() {
 	easycmd.Handle("download", runDownload, "embed the download page in QR")
@@ -51,7 +55,7 @@ func runDownload() {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/html")
-		err := indextmpl.Execute(w, files)
+		err := indexTmpl.Execute(w, files)
 		log.Println("index", err)
 		assert.Nil(err)
 	})
