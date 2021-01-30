@@ -46,12 +46,16 @@ func runDownload() {
 	var wg sync.WaitGroup
 	wg.Add(len(files))
 
+	var mu sync.Mutex
+	done := make(map[string]struct{})
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/html")
 		err := indextmpl.Execute(w, files)
 		log.Println("index", err)
 		assert.Nil(err)
 	})
+
 	http.HandleFunc("/download", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("download", r.URL)
 		q := r.URL.Query()
@@ -73,14 +77,22 @@ func runDownload() {
 			log.Printf("download file:%q err:%v", filename, err)
 			return
 		}
+
+		mu.Lock()
+		if _, ok := done[filename]; !ok {
+			done[filename] = struct{}{}
+			wg.Done()
+		}
+		mu.Unlock()
+
 		if q.Get("auto") == "1" {
 			log.Println("finish auto", filename)
 			status <- filename
-			wg.Done()
 		} else {
 			log.Println("finish", filename)
 		}
 	})
+
 	http.HandleFunc("/status", func(w http.ResponseWriter, r *http.Request) {
 		x := <-status
 		log.Println("status:", x)
